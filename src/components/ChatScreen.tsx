@@ -4,9 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppState } from '@/lib/hooks';
 import { MessageBubble } from './MessageBubble';
-import { ChatInput } from './ChatInput';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Sparkles, MoreHorizontal } from 'lucide-react';
+import { VoiceVisualizer } from './VoiceVisualizer';
+import { LogOut, User, Sparkles, Mic, StopCircle, MessageSquare, Volume2, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ChatScreenProps {
@@ -15,15 +15,17 @@ interface ChatScreenProps {
 }
 
 export function ChatScreen({ onLogout, username }: ChatScreenProps) {
-  const { messages, addMessage, isInitializing } = useAppState();
+  const { messages, addMessage } = useAppState();
   const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showText, setShowText] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, showText]);
 
   const handleSendMessage = async (content: string) => {
     addMessage(content, 'user');
@@ -34,32 +36,36 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
         "Certainly, I've updated your schedule accordingly.",
         "I've analyzed the report. The key takeaways are ready for your review.",
         "Excellent choice. I'll make sure everything is prepared for your meeting.",
-        "நான் உங்கள் உதவியாளர். உங்களுக்கு இன்று எவ்வாறு உதவ முடியும்? (I am your assistant. How can I help you today?)",
+        "நான் உங்கள் உதவியாளர். உங்களுக்கு இன்று எவ்வாறு உதவ முடியும்?",
         "I've synchronized your preferences across all executive channels.",
       ];
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
       addMessage(randomResponse, 'assistant');
+      
+      // Simulate speaking
+      setIsSpeaking(true);
+      setTimeout(() => setIsSpeaking(false), 3000);
     }, 1000);
   };
 
-  const handleVoiceStart = () => {
-    setIsRecording(true);
-    // In a real app, this would start MediaRecorder
-  };
-
-  const handleVoiceStop = () => {
-    setIsRecording(false);
-    // Simulate voice to text
-    setTimeout(() => {
-      handleSendMessage("Schedule a meeting with the board for tomorrow at 10 AM.");
-      toast.info("Audio processed successfully");
-    }, 500);
+  const handleVoiceToggle = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      // Simulate voice to text
+      setTimeout(() => {
+        handleSendMessage("Schedule a meeting with the board for tomorrow at 10 AM.");
+        toast.info("Command received");
+      }, 500);
+    } else {
+      setIsRecording(true);
+      setIsSpeaking(false);
+    }
   };
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
       {/* Premium Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-100 dark:border-zinc-800 z-10">
+      <header className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-2xl border-b border-zinc-100 dark:border-zinc-800 z-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center shadow-lg shadow-zinc-200/50 dark:shadow-black/50">
             <Sparkles className="w-5 h-5 text-zinc-50 dark:text-zinc-900" />
@@ -69,9 +75,9 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
               Executive AI
             </h2>
             <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className={`w-1.5 h-1.5 rounded-full ${isSpeaking ? 'bg-blue-500 animate-pulse' : 'bg-emerald-500'}`} />
               <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">
-                System Active
+                {isSpeaking ? 'Assistant Speaking' : 'System Active'}
               </span>
             </div>
           </div>
@@ -80,11 +86,14 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            size="icon"
-            className="rounded-full text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+            size="sm"
+            onClick={() => setShowText(!showText)}
+            className={`rounded-full gap-2 px-4 transition-all ${showText ? 'bg-zinc-900 text-white dark:bg-white dark:text-black' : 'text-zinc-500'}`}
           >
-            <User className="w-5 h-5" />
+            <MessageSquare className="w-4 h-4" />
+            <span className="text-xs font-medium">{showText ? 'Hide Text' : 'Show Text'}</span>
           </Button>
+          <div className="w-[1px] h-4 bg-zinc-200 dark:bg-zinc-800 mx-1" />
           <Button
             variant="ghost"
             size="icon"
@@ -96,65 +105,149 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
         </div>
       </header>
 
-      {/* Message Area */}
-      <main 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-8 space-y-2 scroll-smooth"
-      >
-        <div className="max-w-3xl mx-auto">
-          {messages.length === 0 ? (
+      {/* Main Experience */}
+      <main className="flex-1 relative flex flex-col items-center justify-center overflow-hidden">
+        {/* Background Visual Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-zinc-200/20 dark:bg-zinc-800/10 rounded-full blur-[120px]" />
+          {isSpeaking && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 bg-blue-500/5 dark:bg-blue-400/5 transition-opacity duration-1000"
+            />
+          )}
+        </div>
+
+        <AnimatePresence mode="wait">
+          {!showText ? (
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col items-center justify-center py-20 text-center space-y-6"
+              key="voice-mode"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative z-10 w-full max-w-lg px-6 flex flex-col items-center gap-12"
             >
-              <div className="w-20 h-20 rounded-3xl bg-white dark:bg-zinc-900 shadow-xl flex items-center justify-center border border-zinc-100 dark:border-zinc-800">
-                <Sparkles className="w-10 h-10 text-zinc-400" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-                  Good Morning, {username}
-                </h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-xs mx-auto">
-                  Your executive assistant is ready. How can I facilitate your operations today?
+              <div className="text-center space-y-4">
+                <motion.h3 
+                  animate={{ opacity: isRecording ? 0.5 : 1 }}
+                  className="text-2xl font-medium text-zinc-900 dark:text-zinc-50 tracking-tight"
+                >
+                  {isRecording ? "Listening to you..." : isSpeaking ? "I'm listening..." : `Good Day, ${username}`}
+                </motion.h3>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm font-light leading-relaxed max-w-xs mx-auto">
+                  {isRecording 
+                    ? "Speak clearly. I am processing your commands in real-time." 
+                    : isSpeaking 
+                      ? "I am responding to your request."
+                      : "Your executive interface is active. Use voice to initiate any operation."}
                 </p>
               </div>
-              
-              <div className="grid grid-cols-1 gap-3 w-full max-w-sm pt-4">
-                {[
-                  "Summarize my recent briefings",
-                  "Prepare itinerary for London trip",
-                  "Draft a response to the quarterly review"
-                ].map((suggestion, i) => (
-                  <Button
-                    key={i}
-                    variant="outline"
-                    onClick={() => handleSendMessage(suggestion)}
-                    className="justify-start h-auto py-3 px-4 border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-left text-sm"
-                  >
-                    {suggestion}
-                  </Button>
-                ))}
+
+              <VoiceVisualizer isRecording={isRecording} isSpeaking={isSpeaking} />
+
+              <div className="relative">
+                {/* Voice Button Glow */}
+                <AnimatePresence>
+                  {isRecording && (
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1.5, opacity: 1 }}
+                      exit={{ scale: 2, opacity: 0 }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="absolute inset-0 bg-red-500/20 rounded-full blur-2xl"
+                    />
+                  )}
+                  {isSpeaking && (
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1.5, opacity: 1 }}
+                      exit={{ scale: 2, opacity: 0 }}
+                      transition={{ repeat: Infinity, duration: 3 }}
+                      className="absolute inset-0 bg-zinc-400/10 dark:bg-zinc-100/10 rounded-full blur-2xl"
+                    />
+                  )}
+                </AnimatePresence>
+
+                <Button
+                  onClick={handleVoiceToggle}
+                  className={`relative z-20 w-32 h-32 rounded-full transition-all duration-700 shadow-2xl flex flex-col items-center justify-center gap-2 ${
+                    isRecording
+                      ? 'bg-red-500 text-white hover:bg-red-600 ring-[12px] ring-red-500/10'
+                      : 'bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 hover:scale-105'
+                  }`}
+                >
+                  {isRecording ? (
+                    <StopCircle className="w-10 h-10" />
+                  ) : (
+                    <Mic className="w-10 h-10" />
+                  )}
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                    {isRecording ? 'Stop' : 'Ask'}
+                  </span>
+                </Button>
               </div>
             </motion.div>
           ) : (
-            <AnimatePresence initial={false}>
-              {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
-              ))}
-            </AnimatePresence>
+            <motion.div
+              key="text-mode"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              className="absolute inset-0 z-30 flex flex-col pt-4"
+            >
+              <div 
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto px-6 pb-32 space-y-4 mask-fade-top"
+              >
+                <div className="max-w-2xl mx-auto pt-10">
+                  {messages.map((msg) => (
+                    <MessageBubble key={msg.id} message={msg} />
+                  ))}
+                  {isSpeaking && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex items-center gap-2 mt-4 text-zinc-400 text-xs italic"
+                    >
+                      <Volume2 className="w-3 h-3 animate-pulse" />
+                      Assistant speaking...
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Voice Trigger from Text View */}
+              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
+                <Button
+                  onClick={() => setShowText(false)}
+                  variant="ghost"
+                  className="rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 shadow-lg group"
+                >
+                  <ChevronUp className="w-4 h-4 mr-2 group-hover:-translate-y-1 transition-transform" />
+                  Back to Voice
+                </Button>
+                
+                <Button
+                  onClick={handleVoiceToggle}
+                  size="icon"
+                  className={`w-16 h-16 rounded-full shadow-2xl transition-all ${
+                    isRecording ? 'bg-red-500 scale-110' : 'bg-zinc-900 dark:bg-zinc-100'
+                  }`}
+                >
+                  {isRecording ? <StopCircle className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </Button>
+              </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </main>
 
-      {/* Input Area */}
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        onVoiceStart={handleVoiceStart}
-        onVoiceStop={handleVoiceStop}
-        isRecording={isRecording}
-      />
+      <style jsx global>{`
+        .mask-fade-top {
+          mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+        }
+      `}</style>
     </div>
   );
 }
