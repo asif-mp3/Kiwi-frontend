@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🥝 Kiwi RAG - Premium Voice AI Assistant
 
-## Getting Started
+Kiwi RAG is a state-of-the-art Retrieval-Augmented Generation (RAG) platform reimagined with a high-fidelity, interactive interface. Transitioning from a basic Streamlit setup to a production-ready Next.js architecture, Kiwi offers a tactile, voice-first experience for interacting with personal knowledge bases.
 
-First, run the development server:
+![Kiwi UI](https://images.unsplash.com/photo-1614741480605-802515d0b63f?q=80&w=2070&auto=format&fit=crop)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **🔋 Premium "Liquid Aura" Visualizer**: A 32-bar radial waveform system that reacts to voice states (idle, recording, speaking) with organic animations and glowing particles.
+- **📊 Google Sheets Integration**: Seamlessly load and sync knowledge from Google Sheets URLs to power the RAG engine.
+- **💬 "Your Chats" Sidebar**: A slide-out panel for session management, allowing users to browse history, create new chats, and delete previous threads.
+- **🎨 Realistic UI Components**: Built with Radix UI and Framer Motion for high-impact micro-interactions, spring-physics animations, and glassmorphism.
+- **🌑 Cinematic Dark Theme**: A deep black palette (#09090b) enhanced with animated green-teal background auras.
+- **🔐 Secure Access**: Built-in authentication system for protected knowledge retrieval.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework**: Next.js 15 (App Router, Turbopack)
+- **Styling**: Tailwind CSS 4 & CSS Variables
+- **Animations**: Framer Motion & Lucide Icons
+- **Typography**: DM Sans & Outfit
+- **UI Components**: Radix UI (Shadcn/ui base)
+- **Data Integration**: RAG-ready architecture for Google Sheets
 
-## Learn More
+## 🚀 Getting Started
 
-To learn more about Next.js, take a look at the following resources:
+### Prerequisites
+- Node.js 18+ 
+- Bun or npm/pnpm
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Installation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/asif-mp3/kiwi-rag.git
+   ```
 
-## Deploy on Vercel
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Open [http://localhost:3000](http://localhost:3000)
+
+### Login Credentials
+- **Username**: `admin`
+- **Password**: `admin123`
+
+## 📖 Usage
+
+1. **Connect Knowledge**: Click the Table icon in the header to input your Google Sheets URL.
+2. **Voice Interaction**: Click the central Kiwi Mic button to start recording. The visualizer will expand and pulse.
+3. **Manage Chats**: Use the "Chat" button in the header or the "Your Chats" sidebar to switch between conversations.
+
+## 📱 UI Evolution
+- **Old**: Static Streamlit UI.
+- **New**: Fully interactive, animated Next.js application with a focus on aesthetics (14/100 -> 100/100).
+
+---
+
+Built with ❤️ for the Kiwi Community.
