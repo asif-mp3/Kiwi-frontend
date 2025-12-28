@@ -1,66 +1,80 @@
-# 🥝 Kiwi RAG - Premium Voice AI Assistant
+# Kiwi RAG: Intelligent Voice-First Analysis Engine
 
-Kiwi RAG is a state-of-the-art Retrieval-Augmented Generation (RAG) platform reimagined with a high-fidelity, interactive interface. Transitioning from a basic Streamlit setup to a production-ready Next.js architecture, Kiwi offers a tactile, voice-first experience for interacting with personal knowledge bases.
+Kiwi RAG is a premium, high-fidelity conversational AI interface designed for Retrieval-Augmented Generation (RAG) tasks. It combines a cinematic "Liquid Aura" aesthetic with a robust state management system, specifically tailored for analyzing structured data from sources like Google Sheets through a voice-first interaction model.
 
-![Kiwi UI](https://images.unsplash.com/photo-1614741480605-802515d0b63f?q=80&w=2070&auto=format&fit=crop)
+## 🌟 Core Features
 
-## ✨ Features
+### 1. Cinematic Voice Interface
+- **Radial Audio Visualizer**: A 32-bar reactive waveform that transforms dynamically based on the system state (Listening vs. Speaking).
+- **Interactive Micro-interactions**: Hover scales, spring-based animations, and glowing particle effects powered by Framer Motion.
+- **State-Aware UI**: The interface shifts colors (Green for listening, Teal for speaking) to provide intuitive non-verbal feedback.
 
-- **🔋 Premium "Liquid Aura" Visualizer**: A 32-bar radial waveform system that reacts to voice states (idle, recording, speaking) with organic animations and glowing particles.
-- **📊 Google Sheets Integration**: Seamlessly load and sync knowledge from Google Sheets URLs to power the RAG engine.
-- **💬 "Your Chats" Sidebar**: A slide-out panel for session management, allowing users to browse history, create new chats, and delete previous threads.
-- **🎨 Realistic UI Components**: Built with Radix UI and Framer Motion for high-impact micro-interactions, spring-physics animations, and glassmorphism.
-- **🌑 Cinematic Dark Theme**: A deep black palette (#09090b) enhanced with animated green-teal background auras.
-- **🔐 Secure Access**: Built-in authentication system for protected knowledge retrieval.
+### 2. Multi-Chat Management ("Your Chats")
+- **Slide-out Sidebar**: A dedicated panel for managing multiple conversation threads.
+- **Persistence**: Full session recovery using local storage synchronization.
+- **Lifecycle Management**: Create, switch, and delete chat tabs with real-time title updates and message counts.
 
-## 🛠️ Tech Stack
+### 3. Google Sheets RAG Integration
+- **Direct Linkage**: Connect any public Google Sheet URL via the secure configuration portal.
+- **Context-Aware Analysis**: The system is designed to ingest spreadsheet data and provide intelligent insights through its internal RAG pipeline.
+- **One-Tap Sync**: Instantly update the data context for the AI assistant.
 
-- **Framework**: Next.js 15 (App Router, Turbopack)
-- **Styling**: Tailwind CSS 4 & CSS Variables
-- **Animations**: Framer Motion & Lucide Icons
-- **Typography**: DM Sans & Outfit
-- **UI Components**: Radix UI (Shadcn/ui base)
-- **Data Integration**: RAG-ready architecture for Google Sheets
+---
+
+## 🏗️ Technical Architecture
+
+### Frontend Stack
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router) for optimized performance and routing.
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) with a custom "Aura Dark" theme.
+- **Animations**: [Framer Motion](https://www.framer.com/motion/) for fluid, hardware-accelerated transitions.
+- **Icons**: [Lucide React](https://lucide.dev/) for a clean, consistent visual language.
+- **Typography**: Optimized loading of **Outfit** (Display) and **DM Sans** (Body) fonts.
+
+### State Management & Persistence
+The application utilizes a custom-built hook architecture (`useAppState`) that manages:
+- **Auth State**: Secure local session handling.
+- **Chat Store**: A hierarchical data structure managing `ChatTab` objects, each containing an array of `Message` objects.
+- **Config Store**: Global settings for RAG parameters (e.g., Google Sheet URLs).
+- **Storage Middleware**: Automatic synchronization between React state and `localStorage` to ensure zero data loss on refresh.
+
+### The "Kiwi" RAG Pipeline (Backend Logic)
+The engine operates on a sophisticated (simulated for demo) RAG architecture:
+1. **Data Ingestion**: When a Google Sheet is linked, the system prepares the URL for indexing.
+2. **Retrieval**: User queries (voice or text) trigger a lookup against the indexed data.
+3. **Augmentation**: The prompt is enriched with relevant rows from the spreadsheet.
+4. **Generation**: The AI generates a contextual response, mimicking a real-time data analyst.
+5. **Multilingual Support**: Built-in support for multiple languages (e.g., Tamil and English) within the response generation logic.
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+ 
-- Bun or npm/pnpm
+- Bun or NPM
 
 ### Installation
+```bash
+# Install dependencies
+bun install
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/asif-mp3/kiwi-rag.git
-   ```
+# Start the development server
+bun run dev
+```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000)
-
-### Login Credentials
+### Authentication
+For the demo version, use the following credentials:
 - **Username**: `admin`
 - **Password**: `admin123`
 
-## 📖 Usage
+---
 
-1. **Connect Knowledge**: Click the Table icon in the header to input your Google Sheets URL.
-2. **Voice Interaction**: Click the central Kiwi Mic button to start recording. The visualizer will expand and pulse.
-3. **Manage Chats**: Use the "Chat" button in the header or the "Your Chats" sidebar to switch between conversations.
-
-## 📱 UI Evolution
-- **Old**: Static Streamlit UI.
-- **New**: Fully interactive, animated Next.js application with a focus on aesthetics (14/100 -> 100/100).
+## 🎨 Design Philosophy
+Kiwi follows a **"Tactile Digital"** philosophy:
+- **Depth**: Layered CSS gradients and blur filters create a sense of physical space.
+- **Focus**: High-contrast accents (Green/Teal) guide the user's attention to primary actions.
+- **Responsiveness**: Fully adaptive layouts that maintain the premium aesthetic across mobile and desktop devices.
 
 ---
 
-Built with ❤️ for the Kiwi Community.
+**Developed with ❤️ by the Kiwi Engineering Team**
