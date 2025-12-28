@@ -97,7 +97,7 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
   return (
     <div className="flex flex-col h-screen bg-zinc-950 overflow-hidden font-sans text-white selection:bg-emerald-500/30">
       {/* Background Atmosphere */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-[120px] animate-pulse [animation-delay:2s]" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 pointer-events-none" />
@@ -123,7 +123,10 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
             </h2>
             <div className="flex items-center gap-2">
               <motion.div 
-                animate={{ scale: isSpeaking ? [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                animate={{ 
+                  scale: isSpeaking ? [1, 1.5, 1] : 1, 
+                  opacity: isSpeaking ? [0.5, 1, 0.5] : 0.5 
+                }}
                 transition={{ repeat: Infinity, duration: 2 }}
                 className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" 
               />
