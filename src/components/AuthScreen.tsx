@@ -23,7 +23,6 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
     setIsLoading(true);
     setError(false);
 
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (username === 'admin' && password === 'admin123') {
@@ -40,62 +39,98 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.3,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6 relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-zinc-200/50 dark:bg-zinc-800/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-zinc-200/50 dark:bg-zinc-800/20 rounded-full blur-[120px]" />
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md space-y-8"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-md space-y-8 relative z-10"
       >
         <div className="text-center space-y-2">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-200/50 dark:shadow-black/50 mb-4"
+            variants={itemVariants}
+            className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-white dark:bg-zinc-900 shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 mb-6 relative group overflow-hidden"
           >
-            <ShieldCheck className="w-8 h-8 text-zinc-900 dark:text-zinc-100" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-zinc-100 to-transparent dark:from-zinc-800 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            <ShieldCheck className="w-10 h-10 text-zinc-900 dark:text-zinc-100 relative z-10" />
           </motion.div>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Secure Access
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-            Please sign in to your executive assistant dashboard.
-          </p>
+          
+          <motion.h1 
+            variants={itemVariants}
+            className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 font-space"
+          >
+            Executive Login
+          </motion.h1>
+          <motion.p 
+            variants={itemVariants}
+            className="text-zinc-500 dark:text-zinc-400 text-sm font-light tracking-wide"
+          >
+            Authorize your secure session to continue
+          </motion.p>
         </div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-zinc-100 dark:border-zinc-800"
+          variants={itemVariants}
+          className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl p-8 rounded-[2.5rem] shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 border border-white/50 dark:border-zinc-800/50 overflow-hidden relative"
         >
+          {/* Internal Glow */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-zinc-200 dark:via-zinc-700 to-transparent opacity-50" />
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 ml-1">Username</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username"
+                placeholder="admin"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className={`h-12 bg-zinc-50 dark:bg-zinc-800/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600 transition-all ${
-                  error ? 'ring-1 ring-red-500' : ''
+                className={`h-14 bg-zinc-50/50 dark:bg-zinc-800/30 border-zinc-100 dark:border-zinc-800 rounded-2xl focus-visible:ring-2 focus-visible:ring-zinc-900 dark:focus-visible:ring-zinc-100 transition-all text-base ${
+                  error ? 'ring-1 ring-red-500 border-red-500' : ''
                 }`}
                 disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label htmlFor="password" className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400">Password</Label>
+                <button type="button" className="text-[10px] uppercase tracking-[0.1em] font-bold text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Forgot?</button>
+              </div>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="admin123"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`h-12 bg-zinc-50 dark:bg-zinc-800/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600 transition-all ${
-                  error ? 'ring-1 ring-red-500' : ''
+                className={`h-14 bg-zinc-50/50 dark:bg-zinc-800/30 border-zinc-100 dark:border-zinc-800 rounded-2xl focus-visible:ring-2 focus-visible:ring-zinc-900 dark:focus-visible:ring-zinc-100 transition-all text-base ${
+                  error ? 'ring-1 ring-red-500 border-red-500' : ''
                 }`}
                 disabled={isLoading}
               />
@@ -103,54 +138,62 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
 
             <Button
               type="submit"
-              className="w-full h-12 bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl transition-all duration-300 group"
+              className="w-full h-14 bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 hover:scale-[1.02] active:scale-[0.98] rounded-2xl transition-all duration-300 group shadow-xl shadow-zinc-900/10 dark:shadow-black/20"
               disabled={isLoading}
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <span className="flex items-center gap-2">
-                  Sign In <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                <span className="flex items-center justify-center gap-3 font-semibold tracking-wide">
+                  Secure Sign In <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
               )}
             </Button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="relative mb-6 text-center">
-              <span className="bg-white dark:bg-zinc-900 px-4 text-xs font-medium text-zinc-400 uppercase tracking-widest relative z-10">
-                Or continue with
+          <div className="mt-10 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+            <div className="relative mb-8 text-center">
+              <span className="bg-white/0 dark:bg-zinc-900/0 px-4 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] relative z-10">
+                Authorized Channels
               </span>
-              <div className="absolute top-1/2 left-0 w-full h-px bg-zinc-100 dark:bg-zinc-800 -z-0"></div>
+              <div className="absolute top-1/2 left-0 w-full h-px bg-zinc-100 dark:bg-zinc-800 -z-0 opacity-50"></div>
             </div>
             
-            <Button
-              variant="outline"
-              className="w-full h-12 border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-              disabled={isLoading}
-            >
-              <Chrome className="w-4 h-4 mr-2" />
-              Google
-            </Button>
-            
-            <p className="mt-6 text-center text-xs text-zinc-400">
-              Don&apos;t have an account?{' '}
-              <button className="text-zinc-900 dark:text-zinc-100 font-medium hover:underline">
-                Request Access
-              </button>
-            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="h-14 border-zinc-100 dark:border-zinc-800 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-300 font-medium text-zinc-600 dark:text-zinc-400"
+                disabled={isLoading}
+              >
+                <Chrome className="w-5 h-5 mr-3 text-zinc-400" />
+                Google
+              </Button>
+              <Button
+                variant="outline"
+                className="h-14 border-zinc-100 dark:border-zinc-800 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-300 font-medium text-zinc-600 dark:text-zinc-400"
+                disabled={isLoading}
+              >
+                <ShieldCheck className="w-5 h-5 mr-3 text-zinc-400" />
+                SSO
+              </Button>
+            </div>
           </div>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="text-center"
+          variants={itemVariants}
+          className="text-center space-y-4"
         >
-          <p className="text-[10px] text-zinc-400 uppercase tracking-[0.2em]">
-            Premium Executive Assistant AI v1.0
+          <p className="text-xs text-zinc-400">
+            Internal Access Only. <button className="text-zinc-900 dark:text-zinc-100 font-bold hover:underline transition-all">Request Credentials</button>
           </p>
+          <div className="flex items-center justify-center gap-4 opacity-30 grayscale contrast-150">
+            <div className="h-4 w-px bg-zinc-400" />
+            <p className="text-[9px] uppercase tracking-[0.3em] font-black text-zinc-500">
+              End-to-End Encrypted
+            </p>
+            <div className="h-4 w-px bg-zinc-400" />
+          </div>
         </motion.div>
       </motion.div>
     </div>
