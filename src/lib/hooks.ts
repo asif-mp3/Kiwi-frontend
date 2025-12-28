@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Message, AuthState } from './types';
+import { Message, AuthState, AppConfig, MessageRole } from './types';
 
-const AUTH_KEY = 'ceo_assistant_auth';
-const CHAT_KEY = 'ceo_assistant_chat';
+const AUTH_KEY = 'kiwi_assistant_auth';
+const CHAT_KEY = 'kiwi_assistant_chat';
+const CONFIG_KEY = 'kiwi_assistant_config';
 
 export function useAppState() {
   const [auth, setAuth] = useState<AuthState>({
@@ -13,12 +14,16 @@ export function useAppState() {
   });
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [config, setConfig] = useState<AppConfig>({
+    googleSheetUrl: null,
+  });
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Load state from localStorage on mount
   useEffect(() => {
     const savedAuth = localStorage.getItem(AUTH_KEY);
     const savedChat = localStorage.getItem(CHAT_KEY);
+    const savedConfig = localStorage.getItem(CONFIG_KEY);
 
     if (savedAuth) {
       setAuth(JSON.parse(savedAuth));
@@ -26,6 +31,10 @@ export function useAppState() {
 
     if (savedChat) {
       setMessages(JSON.parse(savedChat));
+    }
+
+    if (savedConfig) {
+      setConfig(JSON.parse(savedConfig));
     }
     
     setIsInitializing(false);
@@ -44,6 +53,12 @@ export function useAppState() {
     }
   }, [messages, isInitializing]);
 
+  useEffect(() => {
+    if (!isInitializing) {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    }
+  }, [config, isInitializing]);
+
   const login = (username: string) => {
     setAuth({ isAuthenticated: true, username });
   };
@@ -51,8 +66,10 @@ export function useAppState() {
   const logout = () => {
     setAuth({ isAuthenticated: false, username: null });
     setMessages([]);
+    setConfig({ googleSheetUrl: null });
     localStorage.removeItem(AUTH_KEY);
     localStorage.removeItem(CHAT_KEY);
+    localStorage.removeItem(CONFIG_KEY);
   };
 
   const addMessage = (content: string, role: MessageRole = 'user') => {
@@ -66,15 +83,19 @@ export function useAppState() {
     return newMessage;
   };
 
+  const setGoogleSheetUrl = (url: string | null) => {
+    setConfig((prev) => ({ ...prev, googleSheetUrl: url }));
+  };
+
   return {
     auth,
     messages,
+    config,
     isInitializing,
     login,
     logout,
     addMessage,
-    setMessages
+    setMessages,
+    setGoogleSheetUrl
   };
 }
-
-type MessageRole = 'user' | 'assistant' | 'system';
