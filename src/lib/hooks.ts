@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Message, AuthState, AppConfig, MessageRole } from './types';
+import { Message, AuthState, AppConfig, MessageRole, ChatTab } from './types';
 
 const AUTH_KEY = 'kiwi_assistant_auth';
 const CHAT_KEY = 'kiwi_assistant_chat';
 const CONFIG_KEY = 'kiwi_assistant_config';
+const CHAT_TABS_KEY = 'kiwi_assistant_tabs';
 
 export function useAppState() {
   const [auth, setAuth] = useState<AuthState>({
@@ -14,16 +15,18 @@ export function useAppState() {
   });
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [chatTabs, setChatTabs] = useState<ChatTab[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [config, setConfig] = useState<AppConfig>({
     googleSheetUrl: null,
   });
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Load state from localStorage on mount
   useEffect(() => {
     const savedAuth = localStorage.getItem(AUTH_KEY);
     const savedChat = localStorage.getItem(CHAT_KEY);
     const savedConfig = localStorage.getItem(CONFIG_KEY);
+    const savedTabs = localStorage.getItem(CHAT_TABS_KEY);
 
     if (savedAuth) {
       setAuth(JSON.parse(savedAuth));
@@ -36,11 +39,18 @@ export function useAppState() {
     if (savedConfig) {
       setConfig(JSON.parse(savedConfig));
     }
+
+    if (savedTabs) {
+      const tabs = JSON.parse(savedTabs);
+      setChatTabs(tabs);
+      if (tabs.length > 0) {
+        setActiveChatId(tabs[0].id);
+      }
+    }
     
     setIsInitializing(false);
   }, []);
 
-  // Persist state changes
   useEffect(() => {
     if (!isInitializing) {
       localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
@@ -59,6 +69,12 @@ export function useAppState() {
     }
   }, [config, isInitializing]);
 
+  useEffect(() => {
+    if (!isInitializing) {
+      localStorage.setItem(CHAT_TABS_KEY, JSON.stringify(chatTabs));
+    }
+  }, [chatTabs, isInitializing]);
+
   const login = (username: string) => {
     setAuth({ isAuthenticated: true, username });
   };
@@ -66,10 +82,13 @@ export function useAppState() {
   const logout = () => {
     setAuth({ isAuthenticated: false, username: null });
     setMessages([]);
+    setChatTabs([]);
+    setActiveChatId(null);
     setConfig({ googleSheetUrl: null });
     localStorage.removeItem(AUTH_KEY);
     localStorage.removeItem(CHAT_KEY);
     localStorage.removeItem(CONFIG_KEY);
+    localStorage.removeItem(CHAT_TABS_KEY);
   };
 
   const addMessage = (content: string, role: MessageRole = 'user') => {
@@ -80,7 +99,50 @@ export function useAppState() {
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, newMessage]);
+    
+    if (activeChatId) {
+      setChatTabs((prev) => prev.map((tab) => 
+        tab.id === activeChatId 
+          ? { ...tab, messages: [...tab.messages, newMessage], updatedAt: Date.now() }
+          : tab
+      ));
+    }
     return newMessage;
+  };
+
+  const createNewChat = (title?: string) => {
+    const newChat: ChatTab = {
+      id: Math.random().toString(36).substring(7),
+      title: title || `Chat ${chatTabs.length + 1}`,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setChatTabs((prev) => [newChat, ...prev]);
+    setActiveChatId(newChat.id);
+    setMessages([]);
+    return newChat;
+  };
+
+  const switchChat = (chatId: string) => {
+    const chat = chatTabs.find((t) => t.id === chatId);
+    if (chat) {
+      setActiveChatId(chatId);
+      setMessages(chat.messages);
+    }
+  };
+
+  const deleteChat = (chatId: string) => {
+    setChatTabs((prev) => prev.filter((t) => t.id !== chatId));
+    if (activeChatId === chatId) {
+      const remaining = chatTabs.filter((t) => t.id !== chatId);
+      if (remaining.length > 0) {
+        switchChat(remaining[0].id);
+      } else {
+        setActiveChatId(null);
+        setMessages([]);
+      }
+    }
   };
 
   const setGoogleSheetUrl = (url: string | null) => {
@@ -91,11 +153,16 @@ export function useAppState() {
     auth,
     messages,
     config,
+    chatTabs,
+    activeChatId,
     isInitializing,
     login,
     logout,
     addMessage,
     setMessages,
-    setGoogleSheetUrl
+    setGoogleSheetUrl,
+    createNewChat,
+    switchChat,
+    deleteChat,
   };
 }
