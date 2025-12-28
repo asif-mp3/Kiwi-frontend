@@ -1,145 +1,203 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState, useRef } from 'react';
 
-export function VoiceVisualizer({ isRecording, isSpeaking }: { isRecording: boolean; isSpeaking: boolean }) {
+interface VoiceVisualizerProps {
+  isRecording: boolean;
+  isSpeaking: boolean;
+}
+
+export function VoiceVisualizer({ isRecording, isSpeaking }: VoiceVisualizerProps) {
+  const [audioLevels, setAudioLevels] = useState<number[]>(Array(32).fill(0.1));
+  const animationRef = useRef<number>();
+
+  useEffect(() => {
+    const animate = () => {
+      if (isRecording || isSpeaking) {
+        setAudioLevels(prev => prev.map(() => 
+          Math.random() * 0.8 + 0.2
+        ));
+      } else {
+        setAudioLevels(prev => prev.map((v) => 
+          Math.max(0.1, v * 0.95)
+        ));
+      }
+      animationRef.current = requestAnimationFrame(animate);
+    };
+    
+    animationRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [isRecording, isSpeaking]);
+
+  const isActive = isRecording || isSpeaking;
+
   return (
-    <div className="relative w-full h-64 flex items-center justify-center">
-      {/* SVG Filter for the Liquid/Gooey effect */}
-      <svg className="absolute invisible">
-        <defs>
-          <filter id="liquid-aura">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
-            <feColorMatrix 
-              in="blur" 
-              mode="matrix" 
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" 
-              result="liquid" 
-            />
-            <feComposite in="SourceGraphic" in2="liquid" operator="atop" />
-          </filter>
-        </defs>
-      </svg>
+    <div className="relative w-80 h-80 flex items-center justify-center">
+      {/* Outer Glow Rings */}
+      <motion.div
+        animate={{
+          scale: isActive ? [1, 1.15, 1] : 1,
+          opacity: isActive ? [0.1, 0.25, 0.1] : 0.05,
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-72 h-72 rounded-full border border-green-500/20"
+      />
+      <motion.div
+        animate={{
+          scale: isActive ? [1, 1.25, 1] : 1,
+          opacity: isActive ? [0.05, 0.15, 0.05] : 0.03,
+        }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+        className="absolute w-80 h-80 rounded-full border border-green-500/10"
+      />
 
-      <div className="relative w-72 h-72 flex items-center justify-center filter url(#liquid-aura)">
-        {/* Deep Background Pulse */}
-        <motion.div
-          animate={{
-            scale: isRecording ? [1, 1.4, 1] : isSpeaking ? [1, 1.2, 1] : 1,
-            opacity: isRecording ? 0.6 : isSpeaking ? 0.4 : 0.1,
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 4,
-            ease: "easeInOut"
-          }}
-          className="absolute w-48 h-48 rounded-full bg-emerald-500/20 blur-2xl"
-        />
+      {/* Ambient Glow */}
+      <motion.div
+        animate={{
+          scale: isRecording ? [1, 1.3, 1] : isSpeaking ? [1, 1.2, 1] : 1,
+          opacity: isRecording ? 0.4 : isSpeaking ? 0.25 : 0.1,
+        }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-48 h-48 rounded-full bg-gradient-to-br from-green-500/30 via-emerald-500/20 to-teal-500/10 blur-3xl"
+      />
 
-        {/* Morphing Liquid Blobs */}
-        <AnimatePresence>
-          {(isRecording || isSpeaking) && (
-            <>
-              {[...Array(5)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ scale: 0, opacity: 0, rotate: 0 }}
-                  animate={{
-                    scale: [1, 1.6 + i * 0.1, 1],
-                    opacity: [0.4, 0.8, 0.4],
-                    rotate: [0, 360],
-                    x: [0, (i - 2) * 45 * (isRecording ? 1.5 : 1), 0],
-                    y: [0, ((i % 2 === 0 ? 1 : -1) * 35) * (isRecording ? 1.5 : 1), 0],
-                  }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 3 + i,
-                    ease: "easeInOut",
-                    delay: i * 0.2
-                  }}
-                  className={`absolute rounded-full blur-xl ${
-                    isRecording 
-                      ? 'bg-emerald-400/40 w-32 h-32' 
-                      : 'bg-lime-400/30 w-28 h-28'
-                  }`}
-                />
-              ))}
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* Core Interaction Sphere */}
-        <motion.div
-          animate={{
-            scale: isRecording ? [1, 1.15, 1] : isSpeaking ? [1, 1.05, 1] : 1,
-            boxShadow: isRecording 
-              ? "0 0 60px 20px rgba(16, 185, 129, 0.4)" 
-              : isSpeaking 
-                ? "0 0 40px 10px rgba(132, 204, 22, 0.2)"
-                : "0 0 20px 0px rgba(0, 0, 0, 0.1)"
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 2,
-            ease: "easeInOut"
-          }}
-          className="relative z-10 w-28 h-28 rounded-full bg-white/10 dark:bg-zinc-900/40 backdrop-blur-2xl border border-white/20 dark:border-zinc-800 flex items-center justify-center overflow-hidden shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)]"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-lime-500/10" />
-          
-          {/* High-Fidelity Waveform */}
-          <div className="flex items-end gap-[4px] h-10">
-            {[...Array(12)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{
-                  height: isRecording || isSpeaking 
-                    ? [8, Math.random() * 32 + 8, 8] 
-                    : 4,
-                  opacity: isRecording || isSpeaking ? 1 : 0.3
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 0.4 + (i * 0.05),
-                  ease: "easeInOut"
-                }}
-                className={`w-[3px] rounded-full transition-colors duration-500 ${
+      {/* Circular Audio Bars */}
+      <div className="absolute w-56 h-56 rounded-full">
+        {audioLevels.map((level, i) => {
+          const angle = (i / audioLevels.length) * 360;
+          const barHeight = isActive ? 20 + level * 40 : 8;
+          return (
+            <motion.div
+              key={i}
+              className="absolute left-1/2 bottom-1/2 origin-bottom"
+              style={{
+                transform: `rotate(${angle}deg) translateX(-50%)`,
+                width: '3px',
+              }}
+              animate={{ height: barHeight }}
+              transition={{ duration: 0.1, ease: "easeOut" }}
+            >
+              <div 
+                className={`w-full h-full rounded-full transition-colors duration-300 ${
                   isRecording 
-                    ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' 
+                    ? 'bg-gradient-to-t from-green-500 to-emerald-400' 
                     : isSpeaking 
-                      ? 'bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]'
-                      : 'bg-zinc-400 dark:bg-zinc-600'
+                      ? 'bg-gradient-to-t from-teal-500 to-cyan-400'
+                      : 'bg-zinc-700'
                 }`}
+                style={{
+                  boxShadow: isActive ? `0 0 ${10 + level * 15}px ${isRecording ? 'rgba(34, 197, 94, 0.5)' : 'rgba(20, 184, 166, 0.5)'}` : 'none'
+                }}
               />
-            ))}
-          </div>
-        </motion.div>
+            </motion.div>
+          );
+        })}
       </div>
 
-      {/* Outer Floating Particles */}
-      <AnimatePresence>
-        {isRecording && (
-          <div className="absolute inset-0 pointer-events-none">
-            {[...Array(8)].map((_, i) => (
+      {/* Inner Orb */}
+      <motion.div
+        animate={{
+          scale: isRecording ? [1, 1.08, 1] : isSpeaking ? [1, 1.05, 1] : 1,
+        }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+        className="relative z-10 w-32 h-32 rounded-full overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, rgba(24, 24, 27, 0.9), rgba(9, 9, 11, 0.95))',
+          boxShadow: isActive 
+            ? `inset 0 0 30px rgba(34, 197, 94, 0.15), 0 0 60px ${isRecording ? 'rgba(34, 197, 94, 0.3)' : 'rgba(20, 184, 166, 0.3)'}`
+            : 'inset 0 0 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.5)'
+        }}
+      >
+        {/* Glass Reflection */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent" />
+        
+        {/* Inner Glow Ring */}
+        <motion.div
+          animate={{ opacity: isActive ? [0.3, 0.6, 0.3] : 0.1 }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-2 rounded-full border border-green-500/30"
+        />
+
+        {/* Center Icon Area */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {isRecording ? (
               <motion.div
-                key={`p-${i}`}
+                key="recording"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                className="flex flex-col items-center gap-2"
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                  className="w-4 h-4 rounded-full bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)]"
+                />
+                <span className="text-[9px] font-bold text-green-400 uppercase tracking-[0.3em]">Live</span>
+              </motion.div>
+            ) : isSpeaking ? (
+              <motion.div
+                key="speaking"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                className="flex gap-1"
+              >
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ height: [8, 20, 8] }}
+                    transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.15 }}
+                    className="w-1 bg-teal-400 rounded-full"
+                  />
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="idle"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                className="w-3 h-3 rounded-full bg-zinc-600"
+              />
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      {/* Floating Particles */}
+      <AnimatePresence>
+        {isActive && (
+          <>
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={`particle-${i}`}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{
-                  opacity: [0, 1, 0],
+                  opacity: [0, 0.8, 0],
                   scale: [0, 1, 0.5],
-                  x: [0, (Math.random() - 0.5) * 300],
-                  y: [0, (Math.random() - 0.5) * 300],
+                  x: [0, (Math.random() - 0.5) * 200],
+                  y: [0, (Math.random() - 0.5) * 200],
                 }}
+                exit={{ opacity: 0, scale: 0 }}
                 transition={{
-                  repeat: Infinity,
                   duration: 2 + Math.random() * 2,
-                  delay: Math.random() * 2
+                  repeat: Infinity,
+                  delay: i * 0.3,
                 }}
-                className="absolute top-1/2 left-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400/40"
+                className={`absolute w-1.5 h-1.5 rounded-full ${
+                  isRecording ? 'bg-green-400' : 'bg-teal-400'
+                }`}
+                style={{
+                  boxShadow: `0 0 10px ${isRecording ? 'rgba(34, 197, 94, 0.8)' : 'rgba(20, 184, 166, 0.8)'}`
+                }}
               />
             ))}
-          </div>
+          </>
         )}
       </AnimatePresence>
     </div>
