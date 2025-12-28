@@ -17,3 +17,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   username: string | null;
 }
+
+export interface AppConfig {
+  googleSheetUrl: string | null;
+}
