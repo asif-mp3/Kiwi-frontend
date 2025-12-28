@@ -6,12 +6,12 @@ import { useAppState } from '@/lib/hooks';
 import { MessageBubble } from './MessageBubble';
 import { Button } from '@/components/ui/button';
 import { VoiceVisualizer } from './VoiceVisualizer';
-import { 
-  LogOut, 
-  Mic, 
-  Square, 
-  MessageCircle, 
-  ChevronLeft, 
+import {
+  LogOut,
+  Mic,
+  Square,
+  MessageCircle,
+  ChevronLeft,
   MoreHorizontal,
   Table,
   History,
@@ -22,9 +22,15 @@ import {
   MessageSquarePlus,
   ChevronRight,
   Settings,
-  Zap
+  Zap,
+  User,
+  Send,
+  Moon,
+  Sun,
+  Monitor
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +38,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ChatTab } from '@/lib/types';
 
@@ -41,10 +55,10 @@ interface ChatScreenProps {
 }
 
 export function ChatScreen({ onLogout, username }: ChatScreenProps) {
-  const { 
-    messages, 
-    addMessage, 
-    config, 
+  const {
+    messages,
+    addMessage,
+    config,
     setGoogleSheetUrl,
     chatTabs,
     activeChatId,
@@ -52,14 +66,17 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
     switchChat,
     deleteChat
   } = useAppState();
-  
+
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showChatsPanel, setShowChatsPanel] = useState(false);
   const [sheetUrl, setSheetUrl] = useState(config.googleSheetUrl || '');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inputMessage, setInputMessage] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -67,12 +84,21 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
     }
   }, [messages, showChat]);
 
+  // Auto-open Google Sheet dialog if no sheet is connected (only once per session)
+  useEffect(() => {
+    const hasShownDialog = sessionStorage.getItem('kiwi_sheet_dialog_shown');
+    if (!config.googleSheetUrl && !hasShownDialog) {
+      setIsModalOpen(true);
+      sessionStorage.setItem('kiwi_sheet_dialog_shown', 'true');
+    }
+  }, [config.googleSheetUrl]);
+
   const handleSendMessage = async (content: string) => {
     if (!activeChatId) {
       createNewChat();
     }
     addMessage(content, 'user');
-    
+
     setTimeout(() => {
       const responses = [
         "I've processed the data from your sheet. Everything looks accurate.",
@@ -83,7 +109,7 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
       ];
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
       addMessage(randomResponse, 'assistant');
-      
+
       setIsSpeaking(true);
       setTimeout(() => setIsSpeaking(false), 3000);
     }, 1500);
@@ -107,6 +133,8 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
   const handleSaveSheet = () => {
     setGoogleSheetUrl(sheetUrl);
     setIsModalOpen(false);
+    // Clear the session flag so dialog can show again if sheet is disconnected
+    sessionStorage.removeItem('kiwi_sheet_dialog_shown');
     toast.success("Sheet Connected", {
       description: "Your Google Sheet is now linked to Kiwi.",
     });
@@ -119,7 +147,7 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
   };
 
   return (
-    <div className="flex h-screen bg-[#09090b] overflow-hidden font-sans text-white">
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* Your Chats Sidebar */}
       <AnimatePresence>
         {showChatsPanel && (
@@ -167,11 +195,10 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                       key={tab.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`group relative p-4 rounded-xl cursor-pointer transition-all ${
-                        activeChatId === tab.id 
-                          ? 'bg-green-500/10 border border-green-500/20' 
-                          : 'hover:bg-zinc-800/50 border border-transparent'
-                      }`}
+                      className={`group relative p-4 rounded-xl cursor-pointer transition-all ${activeChatId === tab.id
+                        ? 'bg-green-500/10 border border-green-500/20'
+                        : 'hover:bg-zinc-800/50 border border-transparent'
+                        }`}
                       onClick={() => {
                         switchChat(tab.id);
                         setShowChatsPanel(false);
@@ -206,7 +233,7 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
         )}
       </AnimatePresence>
 
-      {/* Overlay */}
+      {/* Chats Panel Overlay */}
       <AnimatePresence>
         {showChatsPanel && (
           <motion.div
@@ -223,9 +250,9 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
       <div className="flex-1 flex flex-col relative">
         {/* Background */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-green-500/8 rounded-full blur-[150px]" />
-          <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-teal-500/5 rounded-full blur-[150px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#09090b_70%)]" />
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-green-500/8 dark:bg-green-500/8 rounded-full blur-[150px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-teal-500/5 dark:bg-teal-500/5 rounded-full blur-[150px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
         </div>
 
         {/* Header */}
@@ -234,7 +261,7 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
             <Button
               variant="ghost"
               onClick={() => setShowChatsPanel(true)}
-              className="h-11 px-4 rounded-xl glass border border-zinc-800/50 hover:border-green-500/30 hover:bg-zinc-800/50 transition-all gap-3"
+              className="h-11 px-4 rounded-xl glass border border-border hover:border-green-500/30 hover:bg-accent transition-all gap-3"
             >
               <MessageSquarePlus className="w-4 h-4 text-green-400" />
               <span className="text-sm font-medium">Your Chats</span>
@@ -251,26 +278,26 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
               <DialogTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-11 w-11 rounded-xl glass border border-zinc-800/50 hover:border-green-500/30 hover:bg-zinc-800/50 transition-all"
+                  className="h-11 px-4 rounded-xl glass border border-border hover:border-green-500/30 hover:bg-accent transition-all gap-2"
                 >
                   <Table className="w-4 h-4 text-zinc-400" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-md">
+              <DialogContent className="bg-card border-border text-card-foreground sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-display font-bold">Connect Google Sheet</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-zinc-500">Sheet URL</label>
-                    <Input 
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sheet URL</label>
+                    <Input
                       value={sheetUrl}
                       onChange={(e) => setSheetUrl(e.target.value)}
                       placeholder="https://docs.google.com/spreadsheets/d/..."
-                      className="bg-black/50 border-zinc-800 focus:border-green-500/50 h-12 rounded-xl"
+                      className="bg-background border-border focus:border-green-500/50 h-12 rounded-xl"
                     />
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleSaveSheet}
                     className="w-full bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl h-12 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
@@ -283,26 +310,102 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
             <Button
               variant="ghost"
               onClick={() => setShowChat(!showChat)}
-              className={`h-11 px-4 rounded-xl border transition-all gap-2 ${
-                showChat 
-                  ? 'bg-green-500 text-white border-green-400 hover:bg-green-400' 
-                  : 'glass border-zinc-800/50 hover:border-green-500/30 hover:bg-zinc-800/50'
-              }`}
+              className={`h-11 px-4 rounded-xl border transition-all gap-2 ${showChat
+                ? 'bg-green-500 text-white border-green-400 hover:bg-green-400'
+                : 'glass border-border hover:border-green-500/30 hover:bg-accent'
+                }`}
             >
               <MessageCircle className="w-4 h-4" />
               <span className="text-sm font-medium">Chat</span>
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onLogout}
-              className="h-11 w-11 rounded-xl glass border border-zinc-800/50 text-zinc-500 hover:text-red-400 hover:border-red-500/30 transition-all"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-xl glass border border-border hover:border-green-500/30 hover:bg-accent transition-all"
+                >
+                  <User className="w-4 h-4 text-zinc-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-card border-border text-card-foreground">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{username}</p>
+                    <p className="text-xs leading-none text-muted-foreground">Kiwi Assistant User</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border" />
+                <DropdownMenuItem
+                  onClick={() => setShowSettings(true)}
+                  className="cursor-pointer hover:bg-accent focus:bg-accent"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border" />
+                <DropdownMenuItem
+                  onClick={onLogout}
+                  className="cursor-pointer text-red-400 hover:bg-accent focus:bg-accent hover:text-red-300"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
+
+        {/* Settings Dialog */}
+        <Dialog open={showSettings} onOpenChange={setShowSettings}>
+          <DialogContent className="bg-card border-border text-card-foreground sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-display font-bold">Settings</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-foreground">Theme</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${theme === 'light'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-border hover:border-muted-foreground bg-muted'
+                      }`}
+                  >
+                    <Sun className="w-5 h-5" />
+                    <span className="text-xs font-medium">Light</span>
+                  </button>
+                  <button
+                    onClick={() => setTheme('system')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${theme === 'system'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-border hover:border-muted-foreground bg-muted'
+                      }`}
+                  >
+                    <Monitor className="w-5 h-5" />
+                    <span className="text-xs font-medium">System</span>
+                  </button>
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${theme === 'dark'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-border hover:border-muted-foreground bg-muted'
+                      }`}
+                  >
+                    <Moon className="w-5 h-5" />
+                    <span className="text-xs font-medium">Dark</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Main Experience */}
         <main className="flex-1 relative flex items-center justify-center overflow-hidden">
@@ -314,20 +417,16 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
                 transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 w-full max-w-2xl flex flex-col items-center gap-8 px-8"
+                className="relative z-10 w-full max-w-2xl flex flex-col items-center gap-4 px-6 py-4"
               >
                 {/* Brand Header */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="text-center space-y-3"
+                  className="text-center space-y-2"
                 >
-                  <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full glass border border-zinc-800/50">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Kiwi RAG Engine</span>
-                  </div>
-                  <h1 className="text-5xl font-display font-bold tracking-tight">
+                  <h1 className="text-4xl font-display font-bold tracking-tight">
                     {isRecording ? (
                       <span className="text-green-400">Listening<span className="animate-pulse">...</span></span>
                     ) : isSpeaking ? (
@@ -336,10 +435,10 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                       <>Hey, <span className="gradient-text">{username}</span></>
                     )}
                   </h1>
-                  <p className="text-zinc-500 text-base font-medium max-w-md mx-auto">
-                    {isRecording 
-                      ? "Your voice is being captured securely" 
-                      : isSpeaking 
+                  <p className="text-zinc-500 text-sm font-medium max-w-md mx-auto">
+                    {isRecording
+                      ? "Your voice is being captured securely"
+                      : isSpeaking
                         ? "Generating intelligent response"
                         : "Tap the button below to start a voice conversation"}
                   </p>
@@ -353,11 +452,10 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleVoiceToggle}
-                  className={`relative w-20 h-20 rounded-full transition-all duration-500 flex items-center justify-center ${
-                    isRecording
-                      ? 'bg-green-500 shadow-[0_0_60px_rgba(34,197,94,0.5)]'
-                      : 'bg-zinc-800 border border-zinc-700 hover:border-green-500/50 hover:shadow-[0_0_40px_rgba(34,197,94,0.2)]'
-                  }`}
+                  className={`relative w-16 h-16 rounded-full transition-all duration-500 flex items-center justify-center ${isRecording
+                    ? 'bg-green-500 shadow-[0_0_60px_rgba(34,197,94,0.5)]'
+                    : 'bg-secondary border border-border hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.2)]'
+                    }`}
                 >
                   <AnimatePresence mode="wait">
                     {isRecording ? (
@@ -367,7 +465,7 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                         animate={{ scale: 1, rotate: 0 }}
                         exit={{ scale: 0, rotate: 90 }}
                       >
-                        <Square className="w-7 h-7 text-white fill-current" />
+                        <Square className="w-6 h-6 text-white fill-current" />
                       </motion.div>
                     ) : (
                       <motion.div
@@ -376,31 +474,38 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                         animate={{ scale: 1, rotate: 0 }}
                         exit={{ scale: 0, rotate: -90 }}
                       >
-                        <Mic className="w-7 h-7 text-zinc-300" />
+                        <Mic className="w-6 h-6 text-muted-foreground" />
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </motion.button>
 
-                {/* Status Pills */}
-                <div className="flex items-center gap-4 mt-4">
-                  {[
-                    { label: 'RAG Active', active: true },
-                    { label: config.googleSheetUrl ? 'Sheet Linked' : 'No Sheet', active: !!config.googleSheetUrl },
-                    { label: 'Voice Ready', active: true },
-                  ].map((status, i) => (
-                    <div 
-                      key={i} 
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                        status.active 
-                          ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                          : 'bg-zinc-800/50 text-zinc-500 border border-zinc-800'
-                      }`}
-                    >
-                      <div className={`w-1.5 h-1.5 rounded-full ${status.active ? 'bg-green-500' : 'bg-zinc-600'}`} />
-                      {status.label}
-                    </div>
-                  ))}
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 mt-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => toast.success("Query Plan")}
+                    className="h-9 px-4 rounded-xl glass border border-border hover:border-primary/30 hover:bg-accent transition-all gap-2"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-medium">Query Plan</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => toast.success("Data")}
+                    className="h-9 px-4 rounded-xl glass border border-border hover:border-primary/30 hover:bg-accent transition-all gap-2"
+                  >
+                    <Table className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-medium">Data</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => toast.success("Schema Context")}
+                    className="h-9 px-4 rounded-xl glass border border-border hover:border-primary/30 hover:bg-accent transition-all gap-2"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-medium">Schema Context</span>
+                  </Button>
                 </div>
               </motion.div>
             ) : (
@@ -427,7 +532,7 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                     </Button>
                   </div>
 
-                  <div 
+                  <div
                     ref={scrollRef}
                     className="flex-1 overflow-y-auto space-y-6 pb-32 hide-scrollbar"
                   >
@@ -464,40 +569,61 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                   </div>
                 </div>
 
-                {/* Floating Voice Button */}
-                <div className="absolute bottom-8 left-0 w-full flex justify-center pointer-events-none">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleVoiceToggle}
-                    className={`pointer-events-auto w-16 h-16 rounded-full transition-all duration-300 flex items-center justify-center shadow-2xl ${
-                      isRecording
-                        ? 'bg-green-500 shadow-[0_0_50px_rgba(34,197,94,0.5)]'
-                        : 'bg-zinc-800 border border-zinc-700 hover:border-green-500/50'
-                    }`}
-                  >
-                    {isRecording ? (
-                      <Square className="w-6 h-6 text-white fill-current" />
-                    ) : (
-                      <Mic className="w-6 h-6 text-zinc-300" />
-                    )}
-                  </motion.button>
+                {/* Input Box with Voice and Send */}
+                <div className="absolute bottom-6 left-0 right-0 px-6 pointer-events-none">
+                  <div className="max-w-3xl mx-auto pointer-events-auto">
+                    <div className="flex items-center gap-2 p-2 rounded-2xl glass border border-border bg-card/80 backdrop-blur-xl">
+                      <Input
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && inputMessage.trim()) {
+                            handleSendMessage(inputMessage);
+                            setInputMessage('');
+                          }
+                        }}
+                        placeholder="Type your message..."
+                        className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground"
+                      />
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleVoiceToggle}
+                        className={`w-10 h-10 rounded-xl transition-all duration-300 flex items-center justify-center ${isRecording
+                          ? 'bg-green-500 shadow-[0_0_30px_rgba(34,197,94,0.5)]'
+                          : 'bg-secondary border border-border hover:border-primary/50'
+                          }`}
+                      >
+                        {isRecording ? (
+                          <Square className="w-5 h-5 text-white fill-current" />
+                        ) : (
+                          <Mic className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          if (inputMessage.trim()) {
+                            handleSendMessage(inputMessage);
+                            setInputMessage('');
+                          }
+                        }}
+                        disabled={!inputMessage.trim()}
+                        className={`w-10 h-10 rounded-xl transition-all duration-300 flex items-center justify-center ${inputMessage.trim()
+                          ? 'bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(var(--primary),0.3)]'
+                          : 'bg-secondary border border-border opacity-50 cursor-not-allowed'
+                          }`}
+                      >
+                        <Send className="w-5 h-5 text-white" />
+                      </motion.button>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </main>
-
-        {/* Footer */}
-        <footer className="relative z-10 px-6 py-4 flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-600">
-            Powered by Kiwi-RAG
-          </span>
-          <div className="flex items-center gap-3">
-            <Zap className="w-3 h-3 text-green-500/50" />
-            <span className="text-[10px] font-medium text-zinc-600">v2.0</span>
-          </div>
-        </footer>
       </div>
     </div>
   );

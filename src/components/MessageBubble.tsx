@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Play, RotateCcw, Copy, Check, Volume2 } from 'lucide-react';
+import { Play, Copy, Check, Volume2 } from 'lucide-react';
 import { useState } from 'react';
 
 interface MessageBubbleProps {
@@ -63,11 +63,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
 
         <motion.div
-          animate={{ 
+          animate={{
             scale: isHovered ? 1.01 : 1,
-            boxShadow: isHovered 
-              ? isAssistant 
-                ? '0 10px 40px rgba(34, 197, 94, 0.1)' 
+            boxShadow: isHovered
+              ? isAssistant
+                ? '0 10px 40px rgba(34, 197, 94, 0.1)'
                 : '0 10px 40px rgba(0, 0, 0, 0.3)'
               : '0 4px 20px rgba(0, 0, 0, 0.1)'
           }}
@@ -75,7 +75,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           className={cn(
             "px-5 py-4 rounded-2xl text-[15px] leading-relaxed transition-all duration-300",
             isAssistant
-              ? "bg-zinc-900/80 backdrop-blur-xl text-zinc-100 border border-zinc-800/50 rounded-tl-md"
+              ? "bg-card/80 backdrop-blur-xl text-card-foreground border border-border rounded-tl-md"
               : "bg-gradient-to-br from-green-600 to-green-700 text-white shadow-lg rounded-tr-md"
           )}
         >
@@ -85,26 +85,25 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           )}>
             {message.content}
           </div>
-          
+
           <div className={cn(
             "mt-2 text-[10px] font-medium tracking-wide opacity-50",
-            isAssistant ? "text-zinc-400" : "text-green-100"
+            isAssistant ? "text-muted-foreground" : "text-green-100"
           )}>
             {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         </motion.div>
-        
+
         {/* Action Buttons */}
         {isAssistant && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : -10 }}
             transition={{ duration: 0.2 }}
             className="mt-2 flex items-center gap-2"
           >
             {[
-              { icon: Volume2, label: 'Play', onClick: () => {} },
-              { icon: RotateCcw, label: 'Replay', onClick: () => {} },
+              { icon: Volume2, label: 'Play', onClick: () => { } },
               { icon: copied ? Check : Copy, label: copied ? 'Copied!' : 'Copy', onClick: handleCopy },
             ].map((action, i) => (
               <motion.button
@@ -116,7 +115,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all",
                   copied && action.label === 'Copied!'
                     ? "bg-green-500/20 text-green-400"
-                    : "bg-zinc-800/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <action.icon className="w-3 h-3" />
