@@ -9,6 +9,14 @@ export interface Message {
   isSpeaking?: boolean;
 }
 
+export interface ChatTab {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface ChatSession {
   messages: Message[];
 }
