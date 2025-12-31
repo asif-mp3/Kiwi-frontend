@@ -3,8 +3,14 @@
 import { motion } from 'framer-motion';
 import { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Play, Copy, Check, Volume2 } from 'lucide-react';
+import { Play, Copy, Check, Volume2, Database } from 'lucide-react';
 import { useState } from 'react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { QueryPlanViewer } from './QueryPlanViewer';
 
 interface MessageBubbleProps {
   message: Message;
@@ -122,6 +128,24 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 {action.label}
               </motion.button>
             ))}
+
+            {message.metadata?.plan && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <Database className="w-3 h-3" />
+                    Query Plan
+                  </motion.button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96 p-4 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 shadow-2xl rounded-xl">
+                  <QueryPlanViewer plan={message.metadata.plan} />
+                </PopoverContent>
+              </Popover>
+            )}
           </motion.div>
         )}
       </div>

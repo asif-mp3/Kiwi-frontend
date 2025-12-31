@@ -4,8 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppState } from '@/lib/hooks';
 import { MessageBubble } from './MessageBubble';
-import { Button } from '@/components/ui/button';
 import { VoiceVisualizer } from './VoiceVisualizer';
+import { api } from '@/services/api';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   LogOut,
   Mic,
@@ -48,6 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ChatTab } from '@/lib/types';
+import { DatasetConnection } from './DatasetConnection';
 
 interface ChatScreenProps {
   onLogout: () => void;
@@ -59,24 +62,27 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
     messages,
     addMessage,
     config,
-    setGoogleSheetUrl,
     chatTabs,
     activeChatId,
     createNewChat,
     switchChat,
-    deleteChat
+    deleteChat,
+    getCurrentChat,
+    setDatasetForChat
   } = useAppState();
 
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showChatsPanel, setShowChatsPanel] = useState(false);
-  const [sheetUrl, setSheetUrl] = useState(config.googleSheetUrl || '');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
+
+  /* New State for Voice Section Toggles */
+  const [expandedVoiceSection, setExpandedVoiceSection] = useState<'plan' | 'data' | 'schema' | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -84,60 +90,108 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
     }
   }, [messages, showChat]);
 
-  // Auto-open Google Sheet dialog if no sheet is connected (only once per session)
-  useEffect(() => {
-    const hasShownDialog = sessionStorage.getItem('kiwi_sheet_dialog_shown');
-    if (!config.googleSheetUrl && !hasShownDialog) {
-      setIsModalOpen(true);
-      sessionStorage.setItem('kiwi_sheet_dialog_shown', 'true');
-    }
-  }, [config.googleSheetUrl]);
+  const activeChat = getCurrentChat();
 
   const handleSendMessage = async (content: string) => {
     if (!activeChatId) {
       createNewChat();
     }
+
+    // Check for dataset connection
+    const currentChat = activeChatId ? chatTabs.find(t => t.id === activeChatId) : null;
+    if (!currentChat || currentChat.datasetStatus !== 'ready') {
+      setIsDatasetModalOpen(true);
+      toast.error("Dataset Required", { description: "Please connect a Google Sheet to continue." });
+      return;
+    }
+
     addMessage(content, 'user');
 
-    setTimeout(() => {
-      const responses = [
-        "I've processed the data from your sheet. Everything looks accurate.",
-        "Based on the analysis, the metrics are trending positively.",
-        "நிச்சயமாக, உங்கள் தரவை நான் புதுப்பித்துள்ளேன்.",
-        "The RAG pipeline has been optimized for your query.",
-        "Synchronization complete. Ready for your next command.",
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      addMessage(randomResponse, 'assistant');
+    // Call API with delay
+    try {
+      const response = await api.sendMessage(content);
 
-      setIsSpeaking(true);
-      setTimeout(() => setIsSpeaking(false), 3000);
-    }, 1500);
-  };
-
-  const handleVoiceToggle = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setTimeout(() => {
-        handleSendMessage("Analyze the latest entries from the connected sheet.");
-        toast.success("Voice captured", {
-          description: "Kiwi is processing your request...",
+      if (response.success) {
+        addMessage(response.explanation, 'assistant', {
+          plan: response.plan,
+          data: response.data,
+          schema_context: response.schema_context,
+          data_refreshed: response.data_refreshed
         });
-      }, 600);
-    } else {
-      setIsRecording(true);
-      setIsSpeaking(false);
+
+        if (isVoiceMode) { // Check if we should speak (controlled by previous logic)
+          setIsSpeaking(true);
+          setTimeout(() => setIsSpeaking(false), 3000);
+        }
+      } else {
+        addMessage("Sorry, I encountered an error extracting that information.", 'assistant');
+      }
+
+    } catch (error) {
+      addMessage("Network connection error. Please try again.", 'assistant');
     }
   };
 
-  const handleSaveSheet = () => {
-    setGoogleSheetUrl(sheetUrl);
-    setIsModalOpen(false);
-    // Clear the session flag so dialog can show again if sheet is disconnected
-    sessionStorage.removeItem('kiwi_sheet_dialog_shown');
-    toast.success("Sheet Connected", {
-      description: "Your Google Sheet is now linked to Kiwi.",
+  const handleVoiceToggle = async () => {
+    if (!activeChat) {
+      // Trigger new chat or mandatory dataset prompt
+      if (!isDatasetModalOpen) setIsDatasetModalOpen(true);
+      return;
+    }
+
+    if (!activeChat.datasetUrl) {
+      toast.error("Please connect a dataset first", {
+        description: "Kiwi needs data to answer your questions."
+      });
+      setIsDatasetModalOpen(true);
+      return;
+    }
+
+    const newIsListening = !isListening;
+    setIsListening(newIsListening);
+
+    if (newIsListening) { // Started listening
+      // Reset any open panels
+      setExpandedVoiceSection(null);
+
+      // In a real implementation: Start MediaRecorder here
+      // timerRef.current = setTimeout(...) 
+
+      // AUTOMATIC STOP SIMULATION after 5 seconds
+      // This simulates the user finishing their sentence and silence detection triggering query
+      setTimeout(async () => {
+        setIsListening(false);
+
+        // Create a dummy audio blob to satisfy the API contract
+        // In real app, this comes from MediaRecorder.ondataavailable
+        const mockBlob = new Blob(["mock_audio_data"], { type: "audio/wav" });
+
+        try {
+          // Call strict API endpoint
+          const text = await api.transcribeAudio(mockBlob);
+
+          // Then send message text
+          handleSendMessage(text);
+        } catch (err) {
+          toast.error("Voice processing failed");
+        }
+      }, 5000);
+
+    } else {
+      // Manual stop - would trigger same logic as above in real app
+      // For now, the timeout above handles the "flow"
+    }
+  };
+
+  const handleDatasetSuccess = (url: string) => {
+    setDatasetForChat(url, 'ready', {
+      totalTables: 25,
+      totalRecords: 1305,
+      sheetCount: 5,
+      sheets: ['Month', 'Profit', 'November_Detail', 'Calculation_of_Profit', 'Freshggies_Shop']
     });
+    setIsDatasetModalOpen(false);
+    toast.success("Dataset Connected", { description: "Kiwi is now ready to analyze your data." });
   };
 
   const handleNewChat = () => {
@@ -274,38 +328,29 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-11 px-4 rounded-xl glass border border-border hover:border-green-500/30 hover:bg-accent transition-all gap-2"
-                >
-                  <Table className="w-4 h-4 text-zinc-400" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border text-card-foreground sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-display font-bold">Connect Google Sheet</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sheet URL</label>
-                    <Input
-                      value={sheetUrl}
-                      onChange={(e) => setSheetUrl(e.target.value)}
-                      placeholder="https://docs.google.com/spreadsheets/d/..."
-                      className="bg-background border-border focus:border-green-500/50 h-12 rounded-xl"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSaveSheet}
-                    className="w-full bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl h-12 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    Connect to Kiwi
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button
+              variant="ghost"
+              onClick={() => setIsDatasetModalOpen(true)}
+              className={cn(
+                "h-11 px-4 rounded-xl glass border transition-all gap-2",
+                activeChat?.datasetStatus === 'ready'
+                  ? "border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                  : "border-border hover:border-green-500/30 hover:bg-accent"
+              )}
+            >
+              <Table className={cn("w-4 h-4", activeChat?.datasetStatus === 'ready' ? "text-green-400" : "text-zinc-400")} />
+              <span className="text-sm font-medium hidden sm:inline">
+                {activeChat?.datasetStatus === 'ready' ? 'Loaded Successfully' : ''}
+              </span>
+            </Button>
+
+            <DatasetConnection
+              isOpen={isDatasetModalOpen}
+              onClose={() => setIsDatasetModalOpen(false)}
+              onSuccess={handleDatasetSuccess}
+              initialUrl={activeChat?.datasetUrl || ''}
+              isLocked={activeChat?.datasetStatus === 'ready'}
+            />
 
             <Button
               variant="ghost"
@@ -417,96 +462,198 @@ export function ChatScreen({ onLogout, username }: ChatScreenProps) {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
                 transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 w-full max-w-2xl flex flex-col items-center gap-4 px-6 py-4"
+                className="relative z-10 w-full max-w-2xl flex flex-col items-center justify-between h-full py-8 gap-4 px-6"
               >
-                {/* Brand Header */}
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-center space-y-2"
-                >
-                  <h1 className="text-4xl font-display font-bold tracking-tight">
-                    {isRecording ? (
-                      <span className="text-green-400">Listening<span className="animate-pulse">...</span></span>
-                    ) : isSpeaking ? (
-                      <span className="text-teal-400">Speaking<span className="animate-pulse">...</span></span>
-                    ) : (
-                      <>Hey, <span className="gradient-text">{username}</span></>
-                    )}
-                  </h1>
-                  <p className="text-zinc-500 text-sm font-medium max-w-md mx-auto">
-                    {isRecording
-                      ? "Your voice is being captured securely"
-                      : isSpeaking
-                        ? "Generating intelligent response"
-                        : "Tap the button below to start a voice conversation"}
-                  </p>
-                </motion.div>
+                <div className="flex-1 flex flex-col items-center justify-center gap-8 w-full">
+                  {/* Brand Header */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-center space-y-2"
+                  >
+                    <h1 className="text-4xl font-display font-bold tracking-tight">
+                      {isRecording ? (
+                        <span className="text-green-400">Listening<span className="animate-pulse">...</span></span>
+                      ) : isSpeaking ? (
+                        <span className="text-teal-400">Speaking<span className="animate-pulse">...</span></span>
+                      ) : (
+                        <>Hey, <span className="gradient-text">{username}</span></>
+                      )}
+                    </h1>
+                    <p className="text-zinc-500 text-sm font-medium max-w-md mx-auto">
+                      {isRecording
+                        ? "Your voice is being captured securely"
+                        : isSpeaking
+                          ? "Generating intelligent response"
+                          : "Tap the button below to start a voice conversation"}
+                    </p>
+                  </motion.div>
 
-                {/* Voice Visualizer */}
-                <VoiceVisualizer isRecording={isRecording} isSpeaking={isSpeaking} />
+                  {/* Voice Visualizer */}
+                  <VoiceVisualizer isRecording={isRecording} isSpeaking={isSpeaking} />
 
-                {/* Voice Button */}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleVoiceToggle}
-                  className={`relative w-16 h-16 rounded-full transition-all duration-500 flex items-center justify-center ${isRecording
-                    ? 'bg-green-500 shadow-[0_0_60px_rgba(34,197,94,0.5)]'
-                    : 'bg-secondary border border-border hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.2)]'
-                    }`}
-                >
-                  <AnimatePresence mode="wait">
-                    {isRecording ? (
+                  {/* Voice Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleVoiceToggle}
+                    className={`relative w-16 h-16 rounded-full transition-all duration-500 flex items-center justify-center ${isRecording
+                      ? 'bg-green-500 shadow-[0_0_60px_rgba(34,197,94,0.5)]'
+                      : 'bg-secondary border border-border hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.2)]'
+                      }`}
+                  >
+                    <AnimatePresence mode="wait">
+                      {isRecording ? (
+                        <motion.div
+                          key="stop"
+                          initial={{ scale: 0, rotate: -90 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          exit={{ scale: 0, rotate: 90 }}
+                        >
+                          <Square className="w-6 h-6 text-white fill-current" />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="mic"
+                          initial={{ scale: 0, rotate: 90 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          exit={{ scale: 0, rotate: -90 }}
+                        >
+                          <Mic className="w-6 h-6 text-muted-foreground" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                </div>
+
+                {/* Info Toggles */}
+                <div className="w-full flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setExpandedVoiceSection(expandedVoiceSection === 'plan' ? null : 'plan')}
+                      className={cn("h-9 px-4 rounded-xl glass border transition-all gap-2",
+                        expandedVoiceSection === 'plan' ? "bg-primary/10 border-primary/50 text-primary" : "border-border hover:border-primary/30 hover:bg-accent"
+                      )}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium">Query Plan</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setExpandedVoiceSection(expandedVoiceSection === 'data' ? null : 'data')}
+                      className={cn("h-9 px-4 rounded-xl glass border transition-all gap-2",
+                        expandedVoiceSection === 'data' ? "bg-primary/10 border-primary/50 text-primary" : "border-border hover:border-primary/30 hover:bg-accent"
+                      )}
+                    >
+                      <Table className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium">Data</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setExpandedVoiceSection(expandedVoiceSection === 'schema' ? null : 'schema')}
+                      className={cn("h-9 px-4 rounded-xl glass border transition-all gap-2",
+                        expandedVoiceSection === 'schema' ? "bg-primary/10 border-primary/50 text-primary" : "border-border hover:border-primary/30 hover:bg-accent"
+                      )}
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium">Schema Context</span>
+                    </Button>
+                  </div>
+
+                  {/* Expanded Content Area */}
+                  <AnimatePresence>
+                    {expandedVoiceSection && (
                       <motion.div
-                        key="stop"
-                        initial={{ scale: 0, rotate: -90 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        exit={{ scale: 0, rotate: 90 }}
+                        initial={{ opacity: 0, height: 0, y: 20 }}
+                        animate={{ opacity: 1, height: 'auto', y: 0 }}
+                        exit={{ opacity: 0, height: 0, y: 20 }}
+                        className="w-full bg-zinc-950 rounded-xl border border-border overflow-hidden"
                       >
-                        <Square className="w-6 h-6 text-white fill-current" />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="mic"
-                        initial={{ scale: 0, rotate: 90 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        exit={{ scale: 0, rotate: -90 }}
-                      >
-                        <Mic className="w-6 h-6 text-muted-foreground" />
+                        <div className="p-4 max-h-[250px] overflow-y-auto custom-scrollbar">
+                          {expandedVoiceSection === 'plan' && (
+                            <div className="font-mono text-xs">
+                              <div className="flex items-center gap-2 mb-2 text-primary font-bold uppercase tracking-wider">
+                                <Sparkles className="w-3 h-3" /> Query Plan
+                              </div>
+                              <pre className="text-zinc-400 leading-relaxed whitespace-pre-wrap">
+                                {`{
+  "query_type": "lookup",
+  "table": "Freshggies_Shopify_Sales_on_Fulfiilments_October_by_Category",
+  "select_columns": [
+    "Sales by Cat",
+    "Gross sales - 07/10/2025"
+  ],
+  "filters": [
+    {
+      "column": "Sales by Cat",
+      "operator": "LIKE",
+      "value": "%fresh fruits%"
+    }
+  ],
+  "limit": 1,
+  "metrics": [],
+  "group_by": [],
+  "order_by": []
+}`}
+                              </pre>
+                            </div>
+                          )}
+
+                          {expandedVoiceSection === 'data' && (
+                            <div className="text-xs">
+                              <div className="flex items-center gap-2 mb-3 text-primary font-bold uppercase tracking-wider">
+                                <Table className="w-3 h-3" /> Data Preview
+                              </div>
+                              <div className="w-full overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                  <thead>
+                                    <tr className="border-b border-white/10 text-zinc-500">
+                                      <th className="py-2 px-3 font-medium">Category</th>
+                                      <th className="py-2 px-3 font-medium">August Qty</th>
+                                      <th className="py-2 px-3 font-medium text-right">Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="text-zinc-300">
+                                    <tr className="border-b border-white/5">
+                                      <td className="py-2 px-3">Fresh Fruits</td>
+                                      <td className="py-2 px-3">125</td>
+                                      <td className="py-2 px-3 text-right">820</td>
+                                    </tr>
+                                    <tr className="border-b border-white/5 bg-white/5">
+                                      <td className="py-2 px-3">Vegetables</td>
+                                      <td className="py-2 px-3">98</td>
+                                      <td className="py-2 px-3 text-right">450</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {expandedVoiceSection === 'schema' && (
+                            <div className="text-xs font-mono text-zinc-400 space-y-3">
+                              <div className="flex items-center gap-2 mb-2 text-primary font-bold uppercase tracking-wider font-sans">
+                                <Settings className="w-3 h-3" /> Schema Context
+                              </div>
+                              <div className="p-2 bg-white/5 rounded border border-white/10">
+                                <span className="text-zinc-300 font-bold">1. Table 'sales':</span> Columns: Freshggies - Shopify Sales on Fulfillments (TIMESTAMP_NS), Unnamed (VARCHAR), Unnamed_1 (BIGINT)...
+                              </div>
+                              <div className="p-2 bg-white/5 rounded border border-white/10">
+                                <span className="text-zinc-300 font-bold">2. Table 'sales by cat':</span> Columns: Unnamed (INTEGER), Unnamed_1 (INTEGER), Freshggies - Shopify Sales on Fulfillments (VARCHAR)...
+                              </div>
+                              <div className="p-2 bg-white/5 rounded border border-white/10">
+                                <span className="text-zinc-300 font-bold">3. Table 'Month':</span> Columns: S.no (BIGINT), Lineitem name (VARCHAR), M Category (VARCHAR), August (BIGINT)...
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </motion.button>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 mt-3">
-                  <Button
-                    variant="ghost"
-                    onClick={() => toast.success("Query Plan")}
-                    className="h-9 px-4 rounded-xl glass border border-border hover:border-primary/30 hover:bg-accent transition-all gap-2"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-xs font-medium">Query Plan</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => toast.success("Data")}
-                    className="h-9 px-4 rounded-xl glass border border-border hover:border-primary/30 hover:bg-accent transition-all gap-2"
-                  >
-                    <Table className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-xs font-medium">Data</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => toast.success("Schema Context")}
-                    className="h-9 px-4 rounded-xl glass border border-border hover:border-primary/30 hover:bg-accent transition-all gap-2"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-xs font-medium">Schema Context</span>
-                  </Button>
                 </div>
+
               </motion.div>
             ) : (
               <motion.div

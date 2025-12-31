@@ -47,7 +47,7 @@ export function useAppState() {
         setActiveChatId(tabs[0].id);
       }
     }
-    
+
     setIsInitializing(false);
   }, []);
 
@@ -99,10 +99,10 @@ export function useAppState() {
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, newMessage]);
-    
+
     if (activeChatId) {
-      setChatTabs((prev) => prev.map((tab) => 
-        tab.id === activeChatId 
+      setChatTabs((prev) => prev.map((tab) =>
+        tab.id === activeChatId
           ? { ...tab, messages: [...tab.messages, newMessage], updatedAt: Date.now() }
           : tab
       ));
@@ -117,6 +117,8 @@ export function useAppState() {
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      datasetUrl: null,
+      datasetStatus: 'unconnected',
     };
     setChatTabs((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
@@ -145,6 +147,54 @@ export function useAppState() {
     }
   };
 
+  const setDatasetForChat = (
+    url: string | null,
+    status: ChatTab['datasetStatus'] = 'unconnected',
+    stats?: ChatTab['datasetStats']
+  ) => {
+    if (!activeChatId) return;
+
+    setChatTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeChatId
+          ? {
+            ...tab,
+            datasetUrl: url,
+            datasetStatus: status,
+            datasetStats: stats,
+            updatedAt: Date.now(),
+          }
+          : tab
+      )
+    );
+  };
+
+  const updateMessage = (messageId: string, updates: Partial<Message>) => {
+    setMessages((prev) =>
+      prev.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg))
+    );
+
+    if (activeChatId) {
+      setChatTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === activeChatId
+            ? {
+              ...tab,
+              messages: tab.messages.map((msg) =>
+                msg.id === messageId ? { ...msg, ...updates } : msg
+              ),
+              updatedAt: Date.now(),
+            }
+            : tab
+        )
+      );
+    }
+  };
+
+  const getCurrentChat = () => {
+    return chatTabs.find((tab) => tab.id === activeChatId);
+  };
+
   const setGoogleSheetUrl = (url: string | null) => {
     setConfig((prev) => ({ ...prev, googleSheetUrl: url }));
   };
@@ -164,5 +214,8 @@ export function useAppState() {
     createNewChat,
     switchChat,
     deleteChat,
+    setDatasetForChat,
+    getCurrentChat,
+    updateMessage,
   };
 }

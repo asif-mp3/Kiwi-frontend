@@ -407,6 +407,32 @@ Responsive design hook for detecting mobile devices
 
 ---
 
+## 🔌 Backend Integration Guide
+
+**For the Backend Team:** This frontend is designed as a "plug-and-play" socket for the `kiwi-rag` Python backend.
+
+### 1. Single Integration Point
+All backend communications are centralized in **`src/services/api.ts`**.
+To connect the real API:
+1.  Open `src/services/api.ts`.
+2.  Replace the mock `Promise` returns with actual `fetch()` calls to your Python endpoints (e.g., `http://localhost:8000/api/...`).
+
+### 2. Strict Schema Alignment
+The frontend types in **`src/lib/types.ts`** have been synchronized 1:1 with your Python data structures:
+
+| Frontend Interface | Backend Source | Notes |
+|-------------------|----------------|-------|
+| `QueryPlan` | `planning_layer/plan_schema.json` | Matches exact JSON structure (filters, aggregations, etc.) |
+| `DetectedTable` | `data_sources/gsheet/connector.py` | Expects `row_range`, `sheet_hash`, `source_id` |
+| `ProcessQueryResponse` | `app/streamlit_app.py` | Standard response wrapper |
+
+### 3. Data Flow Expectations
+*   **Dataset Loading**: The frontend expects a list of `DetectedTable` objects, not just sheet names. This enables the "Tables per Sheet" visualization.
+*   **Query Plans**: The "View Query Plan" button renders whatever valid JSON you send in `message.metadata.plan`.
+*   **Voice**: The frontend handles recording/visualizing. Your backend just needs to accept blob/text and return text/audio.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
