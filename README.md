@@ -21,6 +21,39 @@ It is designed as a "Socket" that strictly adheres to your Python backend's data
 
 ---
 
+## ⚙️ Environment Configuration
+
+Create a `.env` file in your **backend** root (not here) with the following standard configuration:
+
+```ini
+# ==========================================
+# API Configuration
+# ==========================================
+API_PORT=8000
+API_HOST=0.0.0.0
+API_ENV=development
+
+# ==========================================
+# Google Cloud Services
+# ==========================================
+GOOGLE_CREDENTIALS_PATH=../credentials/service_account.json
+GOOGLE_SHEET_ID=your_sheet_id_here
+
+# ==========================================
+# AI Services
+# ==========================================
+GEMINI_API_KEY=your_gemini_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
+
+# ==========================================
+# Database Configuration
+# ==========================================
+DUCKDB_PATH=./data_sources/snapshots/latest.duckdb
+CHROMADB_PATH=./chroma_db
+```
+
+---
+
 ## 🔌 Integration Guide (Critical)
 
 **You only need to edit ONE file to connect your backend:**
@@ -50,12 +83,14 @@ This file contains 4 Client-Side Stubs. Currently, they return mock data using `
 *   **Trigger**: User clicks Microphone -> Speaks -> Stops.
 *   **Input**: Binary `Blob` (audio/wav).
 *   **Expected Output**: Transcribed text string.
-*   **Implementation Note**: The frontend handles the `MediaRecorder`. You just need to POST this blob to your Whisper/Gemini endpoint.
+*   **REQUIRED MODELS**:
+    *   **STT**: Use `scribe_v1` (ElevenLabs) for transcription.
+    *   **TTS**: Use `multilingual_v2` (ElevenLabs) for voice output.
+    *   **Voice Profile**: **Female Voice** (English + Tamil supported).
 
 ### 4. `checkAuth()`
-*   **Trigger**: App load.
-*   **Expected Output**: `boolean`.
-*   **Implementation**: Use this to check connection health or validate session cookies.
+*   **Status**: **DISABLED** (Always returns true).
+*   **Note**: The user has requested to skip authentication for this version. Ensure your backend allows open access or handles its own stateless checks.
 
 ---
 

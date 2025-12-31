@@ -85,13 +85,10 @@ export const api = {
 
   /**
    * Check authentication status.
-   * Backend equivalent: GET /auth/status or session check
+   * STATUS: DISABLED (Per user request) - Always returns true.
    */
   checkAuth: async (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      // Simulate checking a session cookie or token
-      setTimeout(() => resolve(true), 500);
-    });
+    return Promise.resolve(true);
   }
 };
 
